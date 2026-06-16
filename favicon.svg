@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="The Resilient">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#13315c"/>
+      <stop offset="1" stop-color="#0b2545"/>
+    </linearGradient>
+  </defs>
+  <!-- shield -->
+  <path d="M32 3 L57 12 V31 C57 47 46 56 32 61 C18 56 7 47 7 31 V12 Z"
+        fill="url(#g)" stroke="#34c7ae" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- UK silhouette (scaled to fit shield) -->
+  <g transform="translate(20.5 13) scale(0.082)" fill="#34c7ae" stroke="#34c7ae" stroke-width="6" stroke-linejoin="round">
+    <path d="M118.8 12 L97.4 48.9 L117.8 44.2 L139.7 44.4 L134.5 72.2 L116.5 102.8 L137.2 105 L138.8 108.6 L156.6 148.8 L170.3 154.3 L182.7 193.2 L188.4 206.7 L212.6 213.2 L210.2 235 L200 245 L208 262.6 L190 280.5 L163.2 280.2 L129.1 289.6 L119.8 282.9 L106.5 298.8 L88 295 L74 308 L63.3 301.2 L92.7 265.3 L110.6 258 L79.2 252.3 L73.5 238.7 L94.4 228.1 L83.5 209.7 L87.3 187.4 L117 190.5 L120 170.7 L106.6 149.6 L82 143.2 L77.2 133.9 L84.5 118.7 L77.9 109.3 L67.1 125.4 L66 92.5 L55.8 75.1 L63.1 39.8 L78.7 12.2 L94.7 14.9 Z"/>
+    <path d="M65.6 151.2 L54.9 174.7 L39.8 167.6 L27.4 168.1 L31.5 149.8 L27.4 131.5 L44.2 130.1 Z"/>
+  </g>
+</svg>
