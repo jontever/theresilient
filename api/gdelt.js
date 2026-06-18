@@ -1,31 +1,29 @@
 // UK cyber-threat news via GDELT DOC 2.0 API (free, no key).
 // Surfaces recent news of cyber attacks, ransomware and breaches reported by UK sources.
 //
-// Add ?debug=1 to the request to see, per attempt, the upstream HTTP status, the number
-// of articles, the exact URL and a short body snippet — handy for diagnosing zero-result
-// or blocked responses in production.
+// GDELT rate-limits to ~1 request / 5 seconds per IP (HTTP 429). We therefore:
+//   * make a SINGLE request (not several back-to-back),
+//   * retry once after a >5s pause if we hit the limit,
+//   * cache a successful result for 1 hour with 24h stale-while-revalidate, so one good
+//     fetch is reused for everyone and survives later rate-limited refreshes,
+//   * cache failures for only 30s so the panel recovers quickly.
+// Add ?debug=1 to inspect each attempt's HTTP status, article count and body snippet.
 
 const BASE = "https://api.gdeltproject.org/api/v2/doc/doc";
-const PRIMARY = '(cyberattack OR ransomware OR "data breach" OR hacking) sourcecountry:UK';
-const FALLBACK = '(cyber OR ransomware OR breach OR hacking OR NCSC) sourcecountry:UK';
-
-// Vanilla browser User-Agent. GDELT / its CDN returns empty or blocked bodies to some
-// non-browser or unusual agents, so we present as a normal browser.
+const QUERY = '(cyberattack OR ransomware OR "data breach" OR hacking) sourcecountry:UK';
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-// Encode spaces as %20 and quotes as %22, but keep ":" literal. GDELT treats an encoded
-// "sourcecountry%3AUK" as a keyword (0 results) instead of the operator.
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Encode spaces as %20 and quotes as %22, but keep ":" literal (GDELT treats an encoded
+// "sourcecountry%3AUK" as a keyword -> 0 results).
 function buildUrl(q, timespan) {
   const query = encodeURIComponent(q).replace(/%3A/g, ":");
-  return (
-    BASE +
-    "?query=" + query +
-    "&mode=ArtList&format=json&maxrecords=30&sort=DateDesc&timespan=" + timespan
-  );
+  return BASE + "?query=" + query + "&mode=ArtList&format=json&maxrecords=30&sort=DateDesc&timespan=" + timespan;
 }
 
-// GDELT seendate looks like "20260618T163000Z" -> ISO 8601.
+// GDELT seendate "20260618T163000Z" -> ISO 8601.
 function parseDate(s) {
   if (!s) return null;
   const m = String(s).match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?$/);
@@ -45,12 +43,16 @@ async function tryFetch(url, ms) {
     if (text && text.trim()[0] === "{") {
       try { data = JSON.parse(text); } catch (e) {}
     }
-    return { status: r.status, ok: r.ok, snippet: (text || "").slice(0, 300), data };
+    return { status: r.status, ok: r.ok, snippet: (text || "").slice(0, 200), data };
   } catch (e) {
     return { status: 0, ok: false, snippet: String((e && e.message) || e), data: null };
   } finally {
     clearTimeout(t);
   }
+}
+
+function hasArticles(r) {
+  return !!(r && r.data && Array.isArray(r.data.articles) && r.data.articles.length);
 }
 
 function normalise(articles) {
@@ -73,37 +75,31 @@ function normalise(articles) {
 }
 
 module.exports = async (req, res) => {
-  res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=86400");
   const debug = req.query && (req.query.debug === "1" || req.query.debug === "true");
   const diag = [];
+  const url = buildUrl(QUERY, "14d");
   try {
-    const attempts = [
-      [PRIMARY, "14d", 9000],
-      [FALLBACK, "30d", 6000],
-    ];
-    let data = null;
-    for (const [q, span, ms] of attempts) {
-      const url = buildUrl(q, span);
-      const r = await tryFetch(url, ms);
-      diag.push({
-        query: q,
-        timespan: span,
-        status: r.status,
-        articles: r.data && r.data.articles ? r.data.articles.length : 0,
-        snippet: debug ? r.snippet : undefined,
-        url: debug ? url : undefined,
-      });
-      if (r.data && (r.data.articles || []).length) { data = r.data; break; }
+    let r = await tryFetch(url, 7000);
+    diag.push({ attempt: 1, status: r.status, articles: hasArticles(r) ? r.data.articles.length : 0, snippet: debug ? r.snippet : undefined });
+
+    // If rate-limited (or no usable data), wait past the 5s window and retry once.
+    if (!hasArticles(r)) {
+      await sleep(5500);
+      r = await tryFetch(url, 7000);
+      diag.push({ attempt: 2, status: r.status, articles: hasArticles(r) ? r.data.articles.length : 0, snippet: debug ? r.snippet : undefined });
     }
-    const items = normalise(data && data.articles);
+
+    const items = normalise(r.data && r.data.articles);
+    if (items.length) {
+      res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=86400");
+    } else {
+      res.setHeader("Cache-Control", "s-maxage=30"); // recover quickly
+    }
     const out = { updated: new Date().toISOString(), source: "GDELT", items };
-    if (debug) out._debug = diag;
+    if (debug) { out._debug = diag; out._url = url; }
     res.status(200).json(out);
   } catch (e) {
-    res.status(200).json({
-      error: "News feed temporarily unavailable",
-      items: [],
-      _debug: debug ? String((e && e.message) || e) : undefined,
-    });
+    res.setHeader("Cache-Control", "s-maxage=30");
+    res.status(200).json({ error: "News feed temporarily unavailable", items: [], _debug: debug ? String((e && e.message) || e) : undefined });
   }
 };
