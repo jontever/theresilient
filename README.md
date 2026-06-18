@@ -2,15 +2,35 @@
 
 Landing page for **theresilient.uk** — a curated hub of free resilience, cyber security and assurance tools for UK businesses.
 
-It's a single static `index.html` (no build step, no dependencies), with a `vercel.json` that adds sensible security headers.
+A static `index.html` (no build step) plus a few dependency-free Vercel serverless functions in `/api` that power two live dashboards: a **UK Cyber Threat Dashboard** and a **Ransomware & Breach Tracker**.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `index.html` | The landing page (self-contained: HTML, CSS and inline UK map SVG). |
-| `vercel.json` | Static config + security headers (HSTS, X-Frame-Options, etc.). |
+| `index.html` | The landing page — tool links, UK map, and the two live dashboards. |
+| `api/kev.js` | CISA Known Exploited Vulnerabilities + "vulnerability of the week". |
+| `api/cves.js` | NVD critical CVEs (CVSS ≥ 9) from the last 7 days. |
+| `api/advisories.js` | NCSC reports/news (+ best-effort Action Fraud) via RSS. |
+| `api/ransomware.js` | Recent UK ransomware/leak-site victims (ransomware.live). |
+| `api/_rss.js` | Shared RSS/Atom parser (not a route; `_`-prefixed files are ignored by Vercel routing). |
+| `vercel.json` | Function config + security headers (HSTS, X-Frame-Options, etc.). |
 | `README.md` | This file. |
+
+## How the live data works
+
+The page calls four same-origin endpoints (`/api/kev`, `/api/cves`, `/api/advisories`, `/api/ransomware`). Each function fetches its upstream feed **server-side** (avoiding browser CORS limits), normalises it to small JSON, and sets edge-cache headers (`s-maxage`) so the upstreams aren't hammered and the page stays fast. If a feed is briefly unavailable, that panel shows a graceful "temporarily unavailable" message instead of breaking the page.
+
+| Endpoint | Source | Cache |
+|----------|--------|-------|
+| `/api/kev` | CISA KEV JSON feed | 1 hour |
+| `/api/cves` | NVD CVE API 2.0 (CRITICAL, 7-day window) | 1 hour |
+| `/api/advisories` | NCSC RSS (+ Action Fraud, best-effort) | 30 min |
+| `/api/ransomware` | ransomware.live `v2/countryvictims/GB` | 1 hour |
+
+### Optional: NVD API key (higher rate limit)
+
+The NVD endpoint works without a key but is rate-limited. To raise the limit, request a free key at <https://nvd.nist.gov/developers/request-an-api-key> and add it in Vercel → **Settings → Environment Variables** as `NVD_API_KEY`. No code change needed.
 
 ## Deploy from GitHub to Vercel
 
@@ -48,13 +68,18 @@ Any future `git push` to `main` redeploys the site automatically.
 
 ## Local preview
 
-Just open `index.html` in a browser, or:
+Opening `index.html` directly shows the page, but the `/api/*` dashboards only run on Vercel. To preview them locally with the functions, use the Vercel CLI:
 
 ```powershell
-python -m http.server 8000
-# then visit http://localhost:8000
+npm i -g vercel
+vercel dev
+# then visit the printed http://localhost:3000
 ```
 
 ## Edit the tool links
 
 All links live in the `.grid` section of `index.html` as `<a class="card">` blocks — edit the `href`, `<h3>` title and `.desc` text to add, remove or reorder tools.
+
+## Notes on the threat data
+
+The dashboards are an at-a-glance signpost, not an exhaustive or authoritative feed — always confirm against the original source before acting. Ransomware victims are shown as self-reported on leak sites (country tagging can be imperfect), and links point to the group's ransomware.live page rather than raw `.onion` addresses.

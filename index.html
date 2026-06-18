@@ -127,6 +127,52 @@
   }
   .card .host{font-size:.78rem;color:#94a3b4;word-break:break-all}
 
+  /* Dashboard */
+  .dash{background:#f0f3f8;border-top:1px solid var(--border);padding:64px 24px}
+  .dash .section-head h2{display:inline-flex;align-items:center;gap:10px}
+  .live-dot{width:9px;height:9px;border-radius:50%;background:#e0382d;display:inline-block;
+    box-shadow:0 0 0 0 rgba(224,56,45,.6);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(224,56,45,.5)}70%{box-shadow:0 0 0 8px rgba(224,56,45,0)}100%{box-shadow:0 0 0 0 rgba(224,56,45,0)}}
+
+  .dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;align-items:start}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;
+    box-shadow:0 1px 2px rgba(14,27,44,.04)}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:16px 18px;background:linear-gradient(150deg,var(--navy),var(--navy-2));color:#eaf1f8}
+  .panel-head h3{margin:0;font-size:1.02rem;font-weight:700;display:flex;align-items:center;gap:9px}
+  .panel-head .src{font-size:.72rem;color:#9fb4cc;font-weight:500}
+  .panel-head svg{width:18px;height:18px;stroke:var(--teal-light);fill:none;stroke-width:1.8}
+  .panel-body{padding:8px 0;max-height:430px;overflow-y:auto}
+
+  .row{display:block;padding:12px 18px;border-bottom:1px solid #eef2f7;text-decoration:none;color:inherit}
+  .row:last-child{border-bottom:0}
+  a.row:hover{background:#f6f9fc}
+  .row .r-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .row .r-title{font-weight:600;font-size:.92rem;line-height:1.3}
+  .row .r-meta{font-size:.76rem;color:var(--muted);margin-top:3px}
+  .row .r-desc{font-size:.82rem;color:#6b7a8d;margin-top:5px;line-height:1.4}
+  .pill{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+  .pill-crit{background:#fdecea;color:#c0271c}
+  .pill-cve{background:#eaf0fb;color:#274690}
+  .pill-ransom{background:#fff1e6;color:#b5560f}
+  .pill-grp{background:#f0eaf7;color:#5b3a8c}
+  .pill-date{background:#eef6f3;color:#15776a}
+
+  .featured{margin:6px 18px 12px;padding:14px 16px;border-radius:11px;
+    background:linear-gradient(150deg,#0d2a4e,#10325c);color:#eaf1f8;border:1px solid rgba(52,199,174,.3)}
+  .featured .flabel{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:#7fe0cf;font-weight:700}
+  .featured .fcve{font-size:1.05rem;font-weight:800;margin:4px 0 2px}
+  .featured .fdesc{font-size:.82rem;color:#c5d3e4;margin:6px 0}
+  .featured .faction{font-size:.8rem;margin-top:8px;color:#eaf1f8}
+  .featured .faction b{color:#7fe0cf}
+
+  .muted-note{padding:18px;color:var(--muted);font-size:.88rem;text-align:center}
+  .skeleton{padding:14px 18px}
+  .skeleton .bar{height:10px;border-radius:6px;background:linear-gradient(90deg,#eef2f7,#e3e9f0,#eef2f7);
+    background-size:200% 100%;animation:sh 1.3s infinite;margin:7px 0}
+  @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  .dash-foot{text-align:center;color:var(--muted);font-size:.82rem;margin-top:24px}
+
   /* Footer */
   footer{
     margin-top:48px;padding:32px 24px;text-align:center;color:var(--muted);
@@ -153,7 +199,7 @@
         <p class="lede">A curated hub of free cyber security, assurance and continuity tools to help UK organisations prepare, protect and prove their resilience.</p>
         <div class="cta-row">
           <a class="btn btn-primary" href="#tools">Explore the tools ↓</a>
-          <a class="btn btn-ghost" href="https://www.govassure.uk/" target="_blank" rel="noopener">Visit GovAssure</a>
+          <a class="btn btn-ghost" href="#threats">Live threat dashboard</a>
         </div>
       </div>
       <div class="map-wrap" aria-hidden="true">
@@ -278,10 +324,172 @@
     </div>
   </main>
 
+  <!-- ================= UK CYBER THREAT DASHBOARD ================= -->
+  <section class="dash" id="threats">
+    <div class="wrap">
+      <div class="section-head">
+        <h2><span class="live-dot" aria-hidden="true"></span> UK Cyber Threat Dashboard</h2>
+        <p>A live "state of the threat" view — actively exploited vulnerabilities, fresh critical CVEs and the latest UK advisories. Updated automatically.</p>
+      </div>
+
+      <!-- Vulnerability of the week -->
+      <div id="featured-wrap"></div>
+
+      <div class="dash-grid">
+        <div class="panel">
+          <div class="panel-head">
+            <h3><svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg> Patch Now — CISA KEV</h3>
+            <span class="src">CISA</span>
+          </div>
+          <div class="panel-body" id="kev-body">
+            <div class="skeleton"><div class="bar" style="width:70%"></div><div class="bar" style="width:90%"></div><div class="bar" style="width:55%"></div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3><svg viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Critical CVEs (≥9.0)</h3>
+            <span class="src">NVD · 7 days</span>
+          </div>
+          <div class="panel-body" id="cve-body">
+            <div class="skeleton"><div class="bar" style="width:60%"></div><div class="bar" style="width:85%"></div><div class="bar" style="width:50%"></div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3><svg viewBox="0 0 24 24"><path d="M4 4h16v12H5.2L4 17.5z"/><path d="M8 9h8M8 12h5"/></svg> NCSC &amp; UK Advisories</h3>
+            <span class="src">NCSC · Action Fraud</span>
+          </div>
+          <div class="panel-body" id="adv-body">
+            <div class="skeleton"><div class="bar" style="width:75%"></div><div class="bar" style="width:65%"></div><div class="bar" style="width:80%"></div></div>
+          </div>
+        </div>
+      </div>
+      <p class="dash-foot" id="threats-foot">Loading live feeds…</p>
+    </div>
+  </section>
+
+  <!-- ================= RANSOMWARE & BREACH TRACKER ================= -->
+  <section class="dash" id="ransomware" style="background:#e9edf4">
+    <div class="wrap">
+      <div class="section-head">
+        <h2><span class="live-dot" aria-hidden="true"></span> Ransomware &amp; Breach Tracker</h2>
+        <p>Recent UK-linked victims appearing on ransomware leak sites. A reminder of who's being hit, and why backups and continuity planning matter.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h3><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> UK leak-site activity</h3>
+          <span class="src">ransomware.live</span>
+        </div>
+        <div class="panel-body" id="ransom-body" style="max-height:560px">
+          <div class="skeleton"><div class="bar" style="width:65%"></div><div class="bar" style="width:80%"></div><div class="bar" style="width:55%"></div><div class="bar" style="width:70%"></div></div>
+        </div>
+      </div>
+      <p class="dash-foot">Source: <a href="https://www.ransomware.live" target="_blank" rel="noopener" style="color:var(--navy-2);font-weight:600">ransomware.live</a> · UK-tagged victims, newest first.</p>
+    </div>
+  </section>
+
   <footer>
     <p><strong>The Resilient</strong> · Free resilience &amp; cyber tools for UK businesses · <a href="https://theresilient.uk">theresilient.uk</a></p>
     <p style="font-size:.82rem;color:#94a3b4">Links open external tools. The Resilient is a signposting hub and is not affiliated with the linked services unless stated.</p>
   </footer>
+
+  <script>
+  (function () {
+    var esc = function (s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    };
+    var fmtDate = function (d) {
+      if (!d) return "";
+      var t = new Date(d);
+      if (isNaN(t)) return "";
+      return t.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    };
+    var daysAgo = function (d) {
+      var t = new Date(d);
+      if (isNaN(t)) return "";
+      var n = Math.round((Date.now() - t) / 86400000);
+      return n <= 0 ? "today" : n === 1 ? "1 day ago" : n + " days ago";
+    };
+    var get = function (url) {
+      return fetch(url).then(function (r) { return r.json(); });
+    };
+    var empty = function (el, msg) { el.innerHTML = '<div class="muted-note">' + esc(msg) + "</div>"; };
+
+    // ---- CISA KEV ----
+    get("/api/kev").then(function (data) {
+      var fw = document.getElementById("featured-wrap");
+      if (data.featured) {
+        var f = data.featured;
+        fw.innerHTML =
+          '<div class="featured">' +
+          '<div class="flabel">⚠ Vulnerability of the week</div>' +
+          '<div class="fcve">' + esc(f.cveID) + " · " + esc(f.vendor) + " " + esc(f.product) + "</div>" +
+          '<div class="fdesc">' + esc(f.description) + "</div>" +
+          '<div class="faction"><b>Action:</b> ' + esc(f.action || "Apply vendor updates.") +
+          (f.dueDate ? '  <b>· Federal due date:</b> ' + esc(fmtDate(f.dueDate)) : "") + "</div>" +
+          "</div>";
+      }
+      var el = document.getElementById("kev-body");
+      if (!data.items || !data.items.length) return empty(el, data.error || "No KEV entries available.");
+      el.innerHTML = data.items.map(function (v) {
+        return '<a class="row" href="https://nvd.nist.gov/vuln/detail/' + esc(v.cveID) + '" target="_blank" rel="noopener">' +
+          '<div class="r-top"><span class="r-title">' + esc(v.cveID) + " — " + esc(v.vendor) + " " + esc(v.product) + "</span>" +
+          (v.ransomware ? '<span class="pill pill-ransom">ransomware</span>' : '<span class="pill pill-crit">exploited</span>') + "</div>" +
+          '<div class="r-meta">Added ' + esc(fmtDate(v.dateAdded)) + (v.dueDate ? " · patch by " + esc(fmtDate(v.dueDate)) : "") + "</div>" +
+          '<div class="r-desc">' + esc(v.description) + "</div></a>";
+      }).join("");
+    }).catch(function () { empty(document.getElementById("kev-body"), "KEV feed unavailable."); });
+
+    // ---- NVD critical CVEs ----
+    get("/api/cves").then(function (data) {
+      var el = document.getElementById("cve-body");
+      if (!data.items || !data.items.length) return empty(el, data.error || "No critical CVEs in the last 7 days.");
+      el.innerHTML = data.items.map(function (c) {
+        return '<a class="row" href="' + esc(c.link) + '" target="_blank" rel="noopener">' +
+          '<div class="r-top"><span class="r-title">' + esc(c.id) + "</span>" +
+          '<span class="pill pill-cve">CVSS ' + esc(c.score == null ? "—" : c.score) + "</span></div>" +
+          '<div class="r-meta">Published ' + esc(fmtDate(c.published)) + "</div>" +
+          '<div class="r-desc">' + esc(c.description) + "</div></a>";
+      }).join("");
+    }).catch(function () { empty(document.getElementById("cve-body"), "CVE feed unavailable."); });
+
+    // ---- NCSC / advisories ----
+    get("/api/advisories").then(function (data) {
+      var el = document.getElementById("adv-body");
+      if (!data.items || !data.items.length) return empty(el, data.error || "No advisories available.");
+      el.innerHTML = data.items.map(function (a) {
+        return '<a class="row" href="' + esc(a.link) + '" target="_blank" rel="noopener">' +
+          '<div class="r-top"><span class="r-title">' + esc(a.title) + "</span>" +
+          '<span class="pill pill-date">' + esc(a.source || "NCSC") + "</span></div>" +
+          (a.date ? '<div class="r-meta">' + esc(fmtDate(a.date)) + "</div>" : "") +
+          (a.summary ? '<div class="r-desc">' + esc(a.summary) + "</div>" : "") + "</a>";
+      }).join("");
+    }).catch(function () { empty(document.getElementById("adv-body"), "Advisory feed unavailable."); });
+
+    document.getElementById("threats-foot").textContent =
+      "Sources: CISA KEV, NVD/NIST, NCSC. Feeds cached and refreshed automatically. Not exhaustive — for guidance only.";
+
+    // ---- Ransomware tracker ----
+    get("/api/ransomware").then(function (data) {
+      var el = document.getElementById("ransom-body");
+      if (!data.items || !data.items.length) return empty(el, data.error || "No recent UK victims listed.");
+      el.innerHTML = data.items.map(function (v) {
+        var inner =
+          '<div class="r-top"><span class="r-title">' + esc(v.victim) + "</span>" +
+          '<span class="pill pill-grp">' + esc(v.group) + "</span></div>" +
+          '<div class="r-meta">' + (v.sector ? esc(v.sector) + " · " : "") +
+          (v.discovered ? esc(fmtDate(v.discovered)) + " (" + esc(daysAgo(v.discovered)) + ")" : "date unknown") + "</div>";
+        return v.link
+          ? '<a class="row" href="' + esc(v.link) + '" target="_blank" rel="noopener">' + inner + "</a>"
+          : '<div class="row">' + inner + "</div>";
+      }).join("");
+    }).catch(function () { empty(document.getElementById("ransom-body"), "Ransomware feed unavailable."); });
+  })();
+  </script>
 
 </body>
 </html>
