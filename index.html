@@ -399,7 +399,7 @@
         <div class="panel">
           <div class="panel-head">
             <h3><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg> UK Cyber Threat News</h3>
-            <span class="src">GDELT · 14 days</span>
+            <span class="src">UK security press</span>
           </div>
           <div class="panel-body" id="news-body">
             <div class="skeleton"><div class="bar" style="width:60%"></div><div class="bar" style="width:85%"></div><div class="bar" style="width:50%"></div></div>
@@ -502,14 +502,14 @@
       }).join("");
     }).catch(function () { empty(document.getElementById("kev-body"), "KEV feed unavailable."); });
 
-    // ---- GDELT UK cyber news ----
-    get("/api/gdelt").then(function (data) {
+    // ---- UK cyber news (security press RSS) ----
+    get("/api/news").then(function (data) {
       var el = document.getElementById("news-body");
       if (!data.items || !data.items.length) return empty(el, data.error || "No recent UK cyber news found.");
       el.innerHTML = data.items.map(function (a) {
         return '<a class="row" href="' + esc(a.url) + '" target="_blank" rel="noopener">' +
           '<div class="r-top"><span class="r-title">' + esc(a.title) + "</span>" +
-          '<span class="pill pill-cve">' + esc(a.domain) + "</span></div>" +
+          '<span class="pill pill-cve">' + esc(a.source || "News") + "</span></div>" +
           (a.date ? '<div class="r-meta">' + esc(fmtDate(a.date)) + " · " + esc(daysAgo(a.date)) + "</div>" : "") +
           "</a>";
       }).join("");
@@ -529,7 +529,7 @@
     }).catch(function () { empty(document.getElementById("adv-body"), "Advisory feed unavailable."); });
 
     document.getElementById("threats-foot").textContent =
-      "Sources: CISA KEV, GDELT, NCSC. Feeds cached and refreshed automatically. Not exhaustive — for guidance only.";
+      "Sources: CISA KEV, UK security press, NCSC. Feeds cached and refreshed automatically. Not exhaustive — for guidance only.";
 
     // ---- Ransomware tracker ----
     get("/api/ransomware").then(function (data) {

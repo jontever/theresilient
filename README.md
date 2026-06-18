@@ -10,7 +10,7 @@ A static `index.html` (no build step) plus a few dependency-free Vercel serverle
 |------|---------|
 | `index.html` | The landing page — tool links, UK map, and the two live dashboards. |
 | `api/kev.js` | CISA Known Exploited Vulnerabilities + "vulnerability of the week". |
-| `api/gdelt.js` | UK cyber-threat news (attacks, ransomware, breaches) via GDELT. |
+| `api/news.js` | UK cyber-threat news from UK security-press RSS (Infosecurity Magazine, The Register, Graham Cluley). |
 | `api/advisories.js` | NCSC reports/news (+ best-effort Action Fraud) via RSS. |
 | `api/ransomware.js` | Recent UK ransomware/leak-site victims (ransomware.live). |
 | `api/_rss.js` | Shared RSS/Atom parser (not a route; `_`-prefixed files are ignored by Vercel routing). |
@@ -19,18 +19,22 @@ A static `index.html` (no build step) plus a few dependency-free Vercel serverle
 
 ## How the live data works
 
-The page calls four same-origin endpoints (`/api/kev`, `/api/gdelt`, `/api/advisories`, `/api/ransomware`). Each function fetches its upstream feed **server-side** (avoiding browser CORS limits), normalises it to small JSON, and sets edge-cache headers (`s-maxage`) so the upstreams aren't hammered and the page stays fast. If a feed is briefly unavailable, that panel shows a graceful "temporarily unavailable" message instead of breaking the page.
+The page calls four same-origin endpoints (`/api/kev`, `/api/news`, `/api/advisories`, `/api/ransomware`). Each function fetches its upstream feed **server-side** (avoiding browser CORS limits), normalises it to small JSON, and sets edge-cache headers (`s-maxage`) so the upstreams aren't hammered and the page stays fast. If a feed is briefly unavailable, that panel shows a graceful "temporarily unavailable" message instead of breaking the page.
 
 | Endpoint | Source | Cache |
 |----------|--------|-------|
 | `/api/kev` | CISA KEV JSON feed | 1 hour |
-| `/api/gdelt` | GDELT DOC 2.0 — UK cyber news (14-day window) | 30 min |
+| `/api/news` | UK security-press RSS (Infosecurity Magazine, The Register, Graham Cluley) | 30 min |
 | `/api/advisories` | NCSC RSS (+ Action Fraud, best-effort) | 30 min |
 | `/api/ransomware` | ransomware.live `v2/countryvictims/GB` | 1 hour |
 
-### Why GDELT instead of NVD/CVEs?
+### History of the news panel (NVD → GDELT → RSS)
 
-The dashboard originally pulled critical CVEs from NVD, but NVD's API is unreliable from serverless/datacenter IPs (frequent timeouts and rate-limiting), so that panel often showed "unavailable". It's been replaced with [GDELT](https://www.gdeltproject.org/), which is free, keyless and reliable, and surfaces UK-specific threat *signal* — news of real attacks, ransomware and breaches affecting UK organisations. `api/gdelt.js` tries several queries and time windows and falls back gracefully if none return results. To restore a CVE feed later, add an `api/cves.js` function (with an `NVD_API_KEY` env var for rate limits) and wire it into a panel in `index.html`.
+This panel went through two data sources before landing on RSS:
+
+1. **NVD critical CVEs** — NVD's API times out and rate-limits from serverless/datacenter IPs, so it frequently showed "unavailable".
+2. **GDELT** — free and keyless, but its API rate-limits to ~1 request / 5 seconds *per IP*, and Vercel runs functions on shared IPs, so it returned HTTP 429 on virtually every request. It also produced noisy false positives for `sourcecountry:UK`.
+3. **UK security-press RSS** (current) — `api/news.js` aggregates a few UK-focused security outlets via the shared `api/_rss.js` parser. RSS feeds don't rate-limit, are reliable server-side, and give cleaner UK-relevant signal. Edit the `SOURCES` array in `api/news.js` to add or change outlets.
 
 ## Deploy from GitHub to Vercel
 
