@@ -1,18 +1,22 @@
 // UK cyber-threat news via GDELT DOC 2.0 API (free, no key).
 // Surfaces recent news of cyber attacks, ransomware and breaches reported by UK sources.
 //
-// GDELT can be slow, so we keep this to one primary request (with a single light
-// fallback) and stay comfortably inside the function's maxDuration.
+// GDELT can be slow and rate-limits frequent callers, so we keep this to one primary
+// request (with a single light fallback), stay inside the function's maxDuration, and
+// rely on edge caching (see Cache-Control below) to keep upstream calls infrequent.
 
 const BASE = "https://api.gdeltproject.org/api/v2/doc/doc";
 const PRIMARY = '(cyberattack OR ransomware OR "data breach" OR hacking) sourcecountry:UK';
 const FALLBACK = '(cyber OR ransomware OR breach OR hacking OR NCSC) sourcecountry:UK';
 
-// Build the URL with explicit %20 encoding (GDELT mis-handles "+" for spaces).
+// Encode spaces as %20 and quotes as %22, but keep ":" literal. GDELT treats an
+// encoded "sourcecountry%3AUK" as a keyword (0 results) instead of the operator,
+// so the colon must NOT be percent-encoded.
 function buildUrl(q, timespan) {
+  const query = encodeURIComponent(q).replace(/%3A/g, ":");
   return (
     BASE +
-    "?query=" + encodeURIComponent(q) +
+    "?query=" + query +
     "&mode=ArtList&format=json&maxrecords=30&sort=DateDesc&timespan=" + timespan
   );
 }
@@ -38,7 +42,7 @@ async function tryFetch(url, ms) {
     });
     if (!r.ok) return null;
     const text = await r.text();
-    if (!text || text.trim()[0] !== "{") return null; // GDELT returns plain-text on a bad query
+    if (!text || text.trim()[0] !== "{") return null; // GDELT returns plain-text on a bad query / rate limit
     return JSON.parse(text);
   } catch {
     return null;
