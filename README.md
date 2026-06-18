@@ -10,7 +10,7 @@ A static `index.html` (no build step) plus a few dependency-free Vercel serverle
 |------|---------|
 | `index.html` | The landing page — tool links, UK map, and the two live dashboards. |
 | `api/kev.js` | CISA Known Exploited Vulnerabilities + "vulnerability of the week". |
-| `api/cves.js` | NVD critical CVEs (CVSS ≥ 9) from the last 7 days. |
+| `api/gdelt.js` | UK cyber-threat news (attacks, ransomware, breaches) via GDELT. |
 | `api/advisories.js` | NCSC reports/news (+ best-effort Action Fraud) via RSS. |
 | `api/ransomware.js` | Recent UK ransomware/leak-site victims (ransomware.live). |
 | `api/_rss.js` | Shared RSS/Atom parser (not a route; `_`-prefixed files are ignored by Vercel routing). |
@@ -19,18 +19,18 @@ A static `index.html` (no build step) plus a few dependency-free Vercel serverle
 
 ## How the live data works
 
-The page calls four same-origin endpoints (`/api/kev`, `/api/cves`, `/api/advisories`, `/api/ransomware`). Each function fetches its upstream feed **server-side** (avoiding browser CORS limits), normalises it to small JSON, and sets edge-cache headers (`s-maxage`) so the upstreams aren't hammered and the page stays fast. If a feed is briefly unavailable, that panel shows a graceful "temporarily unavailable" message instead of breaking the page.
+The page calls four same-origin endpoints (`/api/kev`, `/api/gdelt`, `/api/advisories`, `/api/ransomware`). Each function fetches its upstream feed **server-side** (avoiding browser CORS limits), normalises it to small JSON, and sets edge-cache headers (`s-maxage`) so the upstreams aren't hammered and the page stays fast. If a feed is briefly unavailable, that panel shows a graceful "temporarily unavailable" message instead of breaking the page.
 
 | Endpoint | Source | Cache |
 |----------|--------|-------|
 | `/api/kev` | CISA KEV JSON feed | 1 hour |
-| `/api/cves` | NVD CVE API 2.0 (CRITICAL, 7-day window) | 1 hour |
+| `/api/gdelt` | GDELT DOC 2.0 — UK cyber news (14-day window) | 30 min |
 | `/api/advisories` | NCSC RSS (+ Action Fraud, best-effort) | 30 min |
 | `/api/ransomware` | ransomware.live `v2/countryvictims/GB` | 1 hour |
 
-### Optional: NVD API key (higher rate limit)
+### Why GDELT instead of NVD/CVEs?
 
-The NVD endpoint works without a key but is rate-limited. To raise the limit, request a free key at <https://nvd.nist.gov/developers/request-an-api-key> and add it in Vercel → **Settings → Environment Variables** as `NVD_API_KEY`. No code change needed.
+The dashboard originally pulled critical CVEs from NVD, but NVD's API is unreliable from serverless/datacenter IPs (frequent timeouts and rate-limiting), so that panel often showed "unavailable". It's been replaced with [GDELT](https://www.gdeltproject.org/), which is free, keyless and reliable, and surfaces UK-specific threat *signal* — news of real attacks, ransomware and breaches affecting UK organisations. `api/gdelt.js` tries several queries and time windows and falls back gracefully if none return results. To restore a CVE feed later, add an `api/cves.js` function (with an `NVD_API_KEY` env var for rate limits) and wire it into a panel in `index.html`.
 
 ## Deploy from GitHub to Vercel
 

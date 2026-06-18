@@ -348,10 +348,10 @@
 
         <div class="panel">
           <div class="panel-head">
-            <h3><svg viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Critical CVEs (≥9.0)</h3>
-            <span class="src">NVD · 7 days</span>
+            <h3><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg> UK Cyber Threat News</h3>
+            <span class="src">GDELT · 14 days</span>
           </div>
-          <div class="panel-body" id="cve-body">
+          <div class="panel-body" id="news-body">
             <div class="skeleton"><div class="bar" style="width:60%"></div><div class="bar" style="width:85%"></div><div class="bar" style="width:50%"></div></div>
           </div>
         </div>
@@ -444,18 +444,18 @@
       }).join("");
     }).catch(function () { empty(document.getElementById("kev-body"), "KEV feed unavailable."); });
 
-    // ---- NVD critical CVEs ----
-    get("/api/cves").then(function (data) {
-      var el = document.getElementById("cve-body");
-      if (!data.items || !data.items.length) return empty(el, data.error || "No critical CVEs in the last 7 days.");
-      el.innerHTML = data.items.map(function (c) {
-        return '<a class="row" href="' + esc(c.link) + '" target="_blank" rel="noopener">' +
-          '<div class="r-top"><span class="r-title">' + esc(c.id) + "</span>" +
-          '<span class="pill pill-cve">CVSS ' + esc(c.score == null ? "—" : c.score) + "</span></div>" +
-          '<div class="r-meta">Published ' + esc(fmtDate(c.published)) + "</div>" +
-          '<div class="r-desc">' + esc(c.description) + "</div></a>";
+    // ---- GDELT UK cyber news ----
+    get("/api/gdelt").then(function (data) {
+      var el = document.getElementById("news-body");
+      if (!data.items || !data.items.length) return empty(el, data.error || "No recent UK cyber news found.");
+      el.innerHTML = data.items.map(function (a) {
+        return '<a class="row" href="' + esc(a.url) + '" target="_blank" rel="noopener">' +
+          '<div class="r-top"><span class="r-title">' + esc(a.title) + "</span>" +
+          '<span class="pill pill-cve">' + esc(a.domain) + "</span></div>" +
+          (a.date ? '<div class="r-meta">' + esc(fmtDate(a.date)) + " · " + esc(daysAgo(a.date)) + "</div>" : "") +
+          "</a>";
       }).join("");
-    }).catch(function () { empty(document.getElementById("cve-body"), "CVE feed unavailable."); });
+    }).catch(function () { empty(document.getElementById("news-body"), "News feed unavailable."); });
 
     // ---- NCSC / advisories ----
     get("/api/advisories").then(function (data) {
@@ -471,7 +471,7 @@
     }).catch(function () { empty(document.getElementById("adv-body"), "Advisory feed unavailable."); });
 
     document.getElementById("threats-foot").textContent =
-      "Sources: CISA KEV, NVD/NIST, NCSC. Feeds cached and refreshed automatically. Not exhaustive — for guidance only.";
+      "Sources: CISA KEV, GDELT, NCSC. Feeds cached and refreshed automatically. Not exhaustive — for guidance only.";
 
     // ---- Ransomware tracker ----
     get("/api/ransomware").then(function (data) {
