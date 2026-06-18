@@ -43,7 +43,7 @@
 
   /* Dark-mode toggle */
   .theme-toggle{
-    position:fixed;top:16px;right:16px;z-index:60;
+    position:fixed;top:52px;right:16px;z-index:60;
     width:42px;height:42px;border-radius:50%;
     border:1px solid rgba(255,255,255,.22);
     background:rgba(11,37,69,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
@@ -57,10 +57,45 @@
   [data-theme="dark"] .theme-toggle .icon-sun{display:block}
   [data-theme="dark"] .theme-toggle .icon-moon{display:none}
 
+  /* News ticker */
+  .ticker{
+    position:fixed;top:0;left:0;right:0;height:42px;z-index:55;
+    display:flex;align-items:center;overflow:hidden;
+    background:linear-gradient(150deg,var(--navy),var(--navy-2));
+    border-bottom:1px solid rgba(52,199,174,.25);color:#eaf1f8;
+  }
+  .ticker-label{
+    flex:0 0 auto;height:100%;display:flex;align-items:center;gap:7px;
+    padding:0 14px;background:#e0382d;color:#fff;font-weight:700;
+    font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;
+  }
+  .ticker-label .dot{width:7px;height:7px;border-radius:50%;background:#fff;animation:pulse 2s infinite}
+  .ticker-viewport{flex:1;overflow:hidden;position:relative;height:100%}
+  .ticker-track{
+    position:absolute;top:0;left:0;height:100%;
+    display:flex;align-items:center;white-space:nowrap;will-change:transform;
+    animation:ticker-scroll 80s linear infinite;
+  }
+  .ticker:hover .ticker-track{animation-play-state:paused}
+  @keyframes ticker-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .ticker-item{display:inline-flex;align-items:center;gap:8px;padding:0 22px;color:#eaf1f8;text-decoration:none;font-size:.86rem}
+  .ticker-item:hover{color:#fff}
+  .ticker-item .ticker-src{color:var(--teal-light);font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em}
+  .ticker-sep{color:#5f7a93;padding:0 2px}
+  @media (prefers-reduced-motion: reduce){
+    .ticker-track{animation:none;position:relative}
+    .ticker-viewport{overflow-x:auto}
+  }
+  @media(max-width:560px){
+    .ticker-label span.txt{display:none}
+    .ticker-item{font-size:.8rem;padding:0 16px}
+  }
+
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{
     margin:0;
+    padding-top:42px; /* room for the fixed news ticker */
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     color:var(--ink);
     background:var(--paper);
@@ -235,6 +270,13 @@
 </script>
 </head>
 <body>
+
+  <div class="ticker" id="ticker" role="region" aria-label="Latest UK cyber news ticker">
+    <span class="ticker-label"><span class="dot" aria-hidden="true"></span><span class="txt">Live</span></span>
+    <div class="ticker-viewport">
+      <div class="ticker-track" id="tickerTrack"><span class="ticker-item">Loading latest UK cyber news…</span></div>
+    </div>
+  </div>
 
   <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle dark mode" title="Toggle light / dark">
     <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -502,9 +544,26 @@
       }).join("");
     }).catch(function () { empty(document.getElementById("kev-body"), "KEV feed unavailable."); });
 
-    // ---- UK cyber news (security press RSS) ----
+    // ---- UK cyber news (security press RSS) — feeds both the panel and the ticker ----
+    function buildTicker(items) {
+      var track = document.getElementById("tickerTrack");
+      if (!track) return;
+      if (!items || !items.length) { track.innerHTML = '<span class="ticker-item">No recent UK cyber news.</span>'; return; }
+      var sep = '<span class="ticker-sep" aria-hidden="true">•</span>';
+      var html = items.map(function (a) {
+        return '<a class="ticker-item" href="' + esc(a.url) + '" target="_blank" rel="noopener">' +
+          '<span class="ticker-src">' + esc(a.source || "News") + "</span>" + esc(a.title) + "</a>";
+      }).join(sep);
+      // Two copies so the -50% scroll loops seamlessly.
+      track.innerHTML = html + sep + html;
+      // Speed proportional to content width (~70px/sec) so it reads at a steady pace.
+      var oneCopy = track.scrollWidth / 2;
+      track.style.animationDuration = Math.max(25, Math.round(oneCopy / 70)) + "s";
+    }
+
     get("/api/news").then(function (data) {
       var el = document.getElementById("news-body");
+      buildTicker(data.items);
       if (!data.items || !data.items.length) return empty(el, data.error || "No recent UK cyber news found.");
       el.innerHTML = data.items.map(function (a) {
         return '<a class="row" href="' + esc(a.url) + '" target="_blank" rel="noopener">' +
@@ -513,7 +572,10 @@
           (a.date ? '<div class="r-meta">' + esc(fmtDate(a.date)) + " · " + esc(daysAgo(a.date)) + "</div>" : "") +
           "</a>";
       }).join("");
-    }).catch(function () { empty(document.getElementById("news-body"), "News feed unavailable."); });
+    }).catch(function () {
+      empty(document.getElementById("news-body"), "News feed unavailable.");
+      buildTicker(null);
+    });
 
     // ---- NCSC / advisories ----
     get("/api/advisories").then(function (data) {
