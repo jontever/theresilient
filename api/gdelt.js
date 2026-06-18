@@ -1,17 +1,21 @@
 // UK cyber-threat news via GDELT DOC 2.0 API (free, no key).
 // Surfaces recent news of cyber attacks, ransomware and breaches reported by UK sources.
 //
-// GDELT can be slow and rate-limits frequent callers, so we keep this to one primary
-// request (with a single light fallback), stay inside the function's maxDuration, and
-// rely on edge caching (see Cache-Control below) to keep upstream calls infrequent.
+// Add ?debug=1 to the request to see, per attempt, the upstream HTTP status, the number
+// of articles, the exact URL and a short body snippet — handy for diagnosing zero-result
+// or blocked responses in production.
 
 const BASE = "https://api.gdeltproject.org/api/v2/doc/doc";
 const PRIMARY = '(cyberattack OR ransomware OR "data breach" OR hacking) sourcecountry:UK';
 const FALLBACK = '(cyber OR ransomware OR breach OR hacking OR NCSC) sourcecountry:UK';
 
-// Encode spaces as %20 and quotes as %22, but keep ":" literal. GDELT treats an
-// encoded "sourcecountry%3AUK" as a keyword (0 results) instead of the operator,
-// so the colon must NOT be percent-encoded.
+// Vanilla browser User-Agent. GDELT / its CDN returns empty or blocked bodies to some
+// non-browser or unusual agents, so we present as a normal browser.
+const UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+
+// Encode spaces as %20 and quotes as %22, but keep ":" literal. GDELT treats an encoded
+// "sourcecountry%3AUK" as a keyword (0 results) instead of the operator.
 function buildUrl(q, timespan) {
   const query = encodeURIComponent(q).replace(/%3A/g, ":");
   return (
@@ -34,18 +38,16 @@ async function tryFetch(url, ms) {
   try {
     const r = await fetch(url, {
       signal: ctrl.signal,
-      headers: {
-        // GDELT serves empty/blocked responses to some non-browser agents.
-        "User-Agent": "Mozilla/5.0 (compatible; theresilient.uk/1.0; +https://theresilient.uk)",
-        Accept: "application/json",
-      },
+      headers: { "User-Agent": UA, Accept: "application/json,text/plain,*/*" },
     });
-    if (!r.ok) return null;
     const text = await r.text();
-    if (!text || text.trim()[0] !== "{") return null; // GDELT returns plain-text on a bad query / rate limit
-    return JSON.parse(text);
-  } catch {
-    return null;
+    let data = null;
+    if (text && text.trim()[0] === "{") {
+      try { data = JSON.parse(text); } catch (e) {}
+    }
+    return { status: r.status, ok: r.ok, snippet: (text || "").slice(0, 300), data };
+  } catch (e) {
+    return { status: 0, ok: false, snippet: String((e && e.message) || e), data: null };
   } finally {
     clearTimeout(t);
   }
@@ -72,14 +74,36 @@ function normalise(articles) {
 
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=86400");
+  const debug = req.query && (req.query.debug === "1" || req.query.debug === "true");
+  const diag = [];
   try {
-    let data = await tryFetch(buildUrl(PRIMARY, "14d"), 9000);
-    if (!data || !(data.articles || []).length) {
-      data = await tryFetch(buildUrl(FALLBACK, "30d"), 5000);
+    const attempts = [
+      [PRIMARY, "14d", 9000],
+      [FALLBACK, "30d", 6000],
+    ];
+    let data = null;
+    for (const [q, span, ms] of attempts) {
+      const url = buildUrl(q, span);
+      const r = await tryFetch(url, ms);
+      diag.push({
+        query: q,
+        timespan: span,
+        status: r.status,
+        articles: r.data && r.data.articles ? r.data.articles.length : 0,
+        snippet: debug ? r.snippet : undefined,
+        url: debug ? url : undefined,
+      });
+      if (r.data && (r.data.articles || []).length) { data = r.data; break; }
     }
     const items = normalise(data && data.articles);
-    res.status(200).json({ updated: new Date().toISOString(), source: "GDELT", items });
+    const out = { updated: new Date().toISOString(), source: "GDELT", items };
+    if (debug) out._debug = diag;
+    res.status(200).json(out);
   } catch (e) {
-    res.status(200).json({ error: "News feed temporarily unavailable", items: [] });
+    res.status(200).json({
+      error: "News feed temporarily unavailable",
+      items: [],
+      _debug: debug ? String((e && e.message) || e) : undefined,
+    });
   }
 };
