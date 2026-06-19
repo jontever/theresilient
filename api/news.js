@@ -1,4 +1,4 @@
-// UK cyber-threat news from UK security-press RSS/Atom feeds.
+// UK cyber-threat news from security-press RSS/Atom feeds.
 //
 // Replaces the earlier GDELT-backed version: GDELT's free API rate-limits to ~1 request
 // / 5s per IP and Vercel runs functions on shared IPs, so it returned HTTP 429 almost
@@ -10,6 +10,8 @@ const { fetchFeed } = require("./_rss");
 const SOURCES = [
   { url: "https://www.infosecurity-magazine.com/rss/news/", source: "Infosecurity Magazine" },
   { url: "https://www.theregister.com/security/headlines.atom", source: "The Register" },
+  { url: "https://www.bleepingcomputer.com/feed/", source: "BleepingComputer" },
+  { url: "https://feeds.feedburner.com/TheHackersNews", source: "The Hacker News" },
   { url: "https://grahamcluley.com/feed/", source: "Graham Cluley" },
 ];
 
@@ -19,7 +21,7 @@ function ts(d) {
 }
 
 module.exports = async (req, res) => {
-  res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=86400");
+  res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=1800");
   try {
     const results = await Promise.all(SOURCES.map((s) => fetchFeed(s.url, s.source)));
     const seen = new Set();
@@ -28,7 +30,7 @@ module.exports = async (req, res) => {
       .filter((i) => i.title && i.link && !seen.has(i.link) && seen.add(i.link))
       .map((i) => ({ title: i.title, url: i.link, date: i.date, source: i.source }))
       .sort((a, b) => ts(b.date) - ts(a.date))
-      .slice(0, 10);
+      .slice(0, 12);
 
     if (!items.length) res.setHeader("Cache-Control", "s-maxage=60");
     res.status(200).json({ updated: new Date().toISOString(), items });

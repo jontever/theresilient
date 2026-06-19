@@ -10,7 +10,7 @@ A static `index.html` (no build step) plus a few dependency-free Vercel serverle
 |------|---------|
 | `index.html` | The landing page — tool links, UK map, and the two live dashboards. |
 | `api/kev.js` | CISA Known Exploited Vulnerabilities + "vulnerability of the week". |
-| `api/news.js` | UK cyber-threat news from UK security-press RSS (Infosecurity Magazine, The Register, Graham Cluley). |
+| `api/news.js` | Cyber-threat news from security-press RSS (Infosecurity Magazine, The Register, BleepingComputer, The Hacker News, Graham Cluley). |
 | `api/advisories.js` | NCSC reports/news (+ best-effort Action Fraud) via RSS. |
 | `api/ransomware.js` | Recent UK ransomware/leak-site victims (ransomware.live). |
 | `api/_rss.js` | Shared RSS/Atom parser (not a route; `_`-prefixed files are ignored by Vercel routing). |
@@ -24,7 +24,7 @@ The page calls four same-origin endpoints (`/api/kev`, `/api/news`, `/api/adviso
 | Endpoint | Source | Cache |
 |----------|--------|-------|
 | `/api/kev` | CISA KEV JSON feed | 1 hour |
-| `/api/news` | UK security-press RSS (Infosecurity Magazine, The Register, Graham Cluley) | 30 min |
+| `/api/news` | Security-press RSS (Infosecurity Magazine, The Register, BleepingComputer, The Hacker News, Graham Cluley) | 5 min |
 | `/api/advisories` | NCSC RSS (+ Action Fraud, best-effort) | 30 min |
 | `/api/ransomware` | ransomware.live `v2/countryvictims/GB` | 1 hour |
 

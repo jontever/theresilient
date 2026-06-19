@@ -561,21 +561,34 @@
       track.style.animationDuration = Math.max(25, Math.round(oneCopy / 70)) + "s";
     }
 
-    get("/api/news").then(function (data) {
-      var el = document.getElementById("news-body");
-      buildTicker(data.items);
-      if (!data.items || !data.items.length) return empty(el, data.error || "No recent UK cyber news found.");
-      el.innerHTML = data.items.map(function (a) {
-        return '<a class="row" href="' + esc(a.url) + '" target="_blank" rel="noopener">' +
-          '<div class="r-top"><span class="r-title">' + esc(a.title) + "</span>" +
-          '<span class="pill pill-cve">' + esc(a.source || "News") + "</span></div>" +
-          (a.date ? '<div class="r-meta">' + esc(fmtDate(a.date)) + " · " + esc(daysAgo(a.date)) + "</div>" : "") +
-          "</a>";
-      }).join("");
-    }).catch(function () {
-      empty(document.getElementById("news-body"), "News feed unavailable.");
-      buildTicker(null);
-    });
+    var lastNewsSig = "";
+    function loadNews() {
+      // cache:"no-store" so the browser always asks the edge for its freshest copy.
+      fetch("/api/news", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (data) {
+        var items = data.items || [];
+        var el = document.getElementById("news-body");
+        if (!items.length) {
+          empty(el, data.error || "No recent UK cyber news found.");
+        } else {
+          el.innerHTML = items.map(function (a) {
+            return '<a class="row" href="' + esc(a.url) + '" target="_blank" rel="noopener">' +
+              '<div class="r-top"><span class="r-title">' + esc(a.title) + "</span>" +
+              '<span class="pill pill-cve">' + esc(a.source || "News") + "</span></div>" +
+              (a.date ? '<div class="r-meta">' + esc(fmtDate(a.date)) + " · " + esc(daysAgo(a.date)) + "</div>" : "") +
+              "</a>";
+          }).join("");
+        }
+        // Only rebuild the ticker when the headlines actually changed, so it doesn't
+        // restart mid-scroll on every refresh.
+        var sig = items.map(function (a) { return a.url; }).join("|");
+        if (sig !== lastNewsSig) { buildTicker(items); lastNewsSig = sig; }
+      }).catch(function () {
+        empty(document.getElementById("news-body"), "News feed unavailable.");
+        if (!lastNewsSig) buildTicker(null);
+      });
+    }
+    loadNews();
+    setInterval(loadNews, 5 * 60 * 1000); // auto-refresh news + ticker every 5 minutes
 
     // ---- NCSC / advisories ----
     get("/api/advisories").then(function (data) {
