@@ -35,11 +35,15 @@ module.exports = async (req, res) => {
     const latestBatch = newest ? vulns.filter((v) => v.dateAdded === newest.dateAdded) : [];
     const featured = latestBatch.find((v) => v.ransomware) || newest;
 
+    // Exclude the featured CVE from the list so it isn't shown twice.
+    const featuredId = featured ? featured.cveID : null;
+    const items = vulns.filter((v) => v.cveID !== featuredId).slice(0, 12);
+
     res.status(200).json({
       updated: data.dateReleased || new Date().toISOString(),
       total: data.count || vulns.length,
       featured,
-      items: vulns.slice(0, 12),
+      items,
     });
   } catch (e) {
     res.status(200).json({ error: "KEV feed temporarily unavailable", items: [], featured: null });
