@@ -1,8 +1,8 @@
-// CISA Known Exploited Vulnerabilities (KEV) — newest entries + "vuln of the week".
+// CISA Known Exploited Vulnerabilities (KEV) — newest entries + "latest exploited vuln".
 const KEV_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json";
 
 module.exports = async (req, res) => {
-  res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=86400");
+  res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=3600");
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 9000);
@@ -28,15 +28,12 @@ module.exports = async (req, res) => {
       }))
       .sort((a, b) => (a.dateAdded < b.dateAdded ? 1 : -1));
 
-    // Vulnerability of the week: rotate through recent KEV entries one per week so it
-    // actually changes weekly (and stays stable within a week), rather than pinning to
-    // the latest ransomware entry until a newer one happens to appear. Prefer the pool of
-    // ransomware-associated vulns when there are enough of them to rotate through.
-    const recent = vulns.slice(0, 30);
-    const ransomPool = recent.filter((v) => v.ransomware);
-    const pool = ransomPool.length >= 4 ? ransomPool : recent;
-    const weekIndex = Math.floor(Date.now() / 604800000); // ms in a week
-    const featured = pool.length ? pool[weekIndex % pool.length] : null;
+    // Latest exploited vulnerability: take CISA's most recent publication (the entries
+    // sharing the newest dateAdded) and prefer a ransomware-linked one; otherwise the
+    // single newest. This updates whenever CISA adds new KEV entries.
+    const newest = vulns[0] || null;
+    const latestBatch = newest ? vulns.filter((v) => v.dateAdded === newest.dateAdded) : [];
+    const featured = latestBatch.find((v) => v.ransomware) || newest;
 
     res.status(200).json({
       updated: data.dateReleased || new Date().toISOString(),

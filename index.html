@@ -424,7 +424,7 @@
         <p>A live "state of the threat" view — actively exploited vulnerabilities, fresh critical CVEs and the latest UK advisories. Updated automatically.</p>
       </div>
 
-      <!-- Vulnerability of the week -->
+      <!-- Latest exploited vulnerability -->
       <div id="featured-wrap"></div>
 
       <div class="dash-grid">
@@ -515,7 +515,8 @@
       return n <= 0 ? "today" : n === 1 ? "1 day ago" : n + " days ago";
     };
     var get = function (url) {
-      return fetch(url).then(function (r) { return r.json(); });
+      // no-store so the browser always pulls the edge's freshest copy on refresh.
+      return fetch(url, { cache: "no-store" }).then(function (r) { return r.json(); });
     };
     var empty = function (el, msg) { el.innerHTML = '<div class="muted-note">' + esc(msg) + "</div>"; };
 
@@ -526,7 +527,7 @@
         var f = data.featured;
         fw.innerHTML =
           '<div class="featured">' +
-          '<div class="flabel">⚠ Vulnerability of the week</div>' +
+          '<div class="flabel">⚠ Latest exploited vulnerability</div>' +
           '<div class="fcve">' + esc(f.cveID) + " · " + esc(f.vendor) + " " + esc(f.product) + "</div>" +
           '<div class="fdesc">' + esc(f.description) + "</div>" +
           '<div class="faction"><b>Action:</b> ' + esc(f.action || "Apply vendor updates.") +

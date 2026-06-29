@@ -9,7 +9,7 @@ A static `index.html` (no build step) plus a few dependency-free Vercel serverle
 | File | Purpose |
 |------|---------|
 | `index.html` | The landing page — tool links, UK map, and the two live dashboards. |
-| `api/kev.js` | CISA Known Exploited Vulnerabilities + "vulnerability of the week". |
+| `api/kev.js` | CISA Known Exploited Vulnerabilities + "latest exploited vulnerability" callout (newest KEV, favouring ransomware-linked). |
 | `api/news.js` | Cyber-threat news from security-press RSS (Infosecurity Magazine, The Register, BleepingComputer, The Hacker News, Graham Cluley). |
 | `api/advisories.js` | NCSC reports/news (+ best-effort Action Fraud) via RSS. |
 | `api/ransomware.js` | Recent UK ransomware/leak-site victims (ransomware.live). |
